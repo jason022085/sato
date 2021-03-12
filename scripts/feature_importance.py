@@ -54,12 +54,14 @@ def eval_batch(classifier, model, val_dataset, batch_size, device, n_worker, MAX
 
 
     validation = datasets.generate_batches(val_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=False, 
-                                           drop_last=True,
-                                           device=device,
-                                           n_workers=n_worker)
+                                              batch_size=batch_size,
+                                              shuffle=False, 
+                                              drop_last=True,
+                                              device=device,
+                                              n_workers=n_worker)
+    
     y_pred, y_true = [], []
+    
     for table_batch, label_batch, mask_batch in tqdm(validation):
         #pred, labels = eval_batch(table_batch, label_batch, mask_batch)
             
@@ -79,6 +81,7 @@ def eval_batch(classifier, model, val_dataset, batch_size, device, n_worker, MAX
         y_true.extend(ma.array(labels, mask=invert_masks).compressed())
 
     val_acc = classification_report(y_true, y_pred, output_dict=True)
+
     return val_acc
 
 
@@ -113,8 +116,27 @@ if __name__ == "__main__":
     p.add('--model_type', type=str, choices=['single', 'CRF'], help='for sherlock or CRF models')
 
     #p.add('--comment', type=str, default='')
-
+    # feature importance
+    """
+    model_type='single'
+    model_path='sherlock_None.pt'
+    
+    model_type='single'
+    model_path='all_None.pt'
+    topic='num-directstr_thr-0_tn-400'
+    
+    args.model_type='CRF'
+    args.model_path='CRF_pre.pt'
+    
+    args.model_type='CRF'
+    args.model_path='CRF+LDA_pre.pt'
+    args.topic='num-directstr_thr-0_tn-400'
+    """
+    
     args = p.parse_args()
+    args.model_type='CRF'
+    args.model_path='CRF+LDA_pre.pt'
+    args.topic='num-directstr_thr-0_tn-400'
     print("----------")
     print(args)
     print("----------")
@@ -123,6 +145,7 @@ if __name__ == "__main__":
 
 
     n_worker = args.n_worker
+    n_worker = 0
     TYPENAME = args.TYPENAME
 
     sherlock_feature_groups = args.sherlock_feature_groups
@@ -135,14 +158,16 @@ if __name__ == "__main__":
 
 
     seed_list = [1001, 1002, 1003, 1004, 1005]
+    
     #################### 
     # Preparations
     #################### 
+    TYPENAME = 'type78'
     valid_types = get_valid_types(TYPENAME)
-
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("PyTorch device={}".format(device))
-
+    
     if topic_name:
         topic_dim = int(name2dic(topic_name)['tn'])
     else:
@@ -153,19 +178,19 @@ if __name__ == "__main__":
     else:
         feature_group_list = args.sherlock_feature_groups
         
-
+    
     # 1. Dataset
     t1 = time()
     print("Creating Dataset object...")
     label_enc = LabelEncoder()
     label_enc.fit(valid_types)
-
+    
     # load data through table instance 
     multi_tag = '_multi-col' if args.multi_col_only else ''
 
     train_test_path = join(os.environ['BASEPATH'], 'extract', 'out', 'train_test_split')
     org_tests, shuffle_tests = [], []
-
+    
     for corpus in corpus_list:
         with open(join(train_test_path, '{}_{}{}.json'.format(corpus, TYPENAME, multi_tag)), 'r') as f:
             split = json.load(f)
@@ -195,12 +220,12 @@ if __name__ == "__main__":
         shuffle_tests.append(shuffle_test)
 
 
-
+    
     val_dataset = ConcatDataset(org_tests)
 
     t2 = time()
     print("Done ({} sec.)".format(int(t2 - t1)))
-
+    
     # create models
     classifier = build_sherlock(sherlock_feature_groups, num_classes=len(valid_types), topic_dim=topic_dim).to(device)
     model = CRF(len(valid_types) , batch_first=True).to(device)
@@ -254,7 +279,8 @@ if __name__ == "__main__":
         with torch.no_grad():
             result_list = []
             # get base accuracy
-            report_b = eval_batch(classifier, model, val_dataset, args.table_batch_size, device, n_worker, MAX_COL_COUNT)
+           
+            report_b = eval_batch(classifier, model, val_dataset, args.table_batch_size, device, n_worker, MAX_COL_COUNT) #Error
             
 
             for f_g in feature_group_list:
@@ -273,7 +299,7 @@ if __name__ == "__main__":
             df = pd.DataFrame(result_list, columns=['Feature_group', 'Metric', 'Score', 'Seed'])
             df.to_csv('feature_importance_CRF_{}.csv'.format(topic_name), index=False)
             print(df)
-
+    
 
 
 

@@ -16,7 +16,7 @@ import torch.optim as optim
 from torch.utils.data import ConcatDataset
 from sklearn.preprocessing import LabelEncoder
 
-from model import models_sherlock, datasets
+import models_sherlock, datasets
 
 from tensorboardX import SummaryWriter
 from sklearn.metrics import classification_report
@@ -80,7 +80,8 @@ p.add('--multi_col_eval', type=str2bool, default=False, help='Evaluate using onl
 p.add('--comment', type=str, default='')
 
 args = p.parse_args()
-
+args.TYPENAME = 'type78'
+args.n_worker = 0
 print("----------")
 print(args)
 print("----------")
@@ -258,7 +259,7 @@ for corpus in corpus_list:
                     train_ids.extend(split['K{}'.format(i)])
     
     print('data length:\n')        
-    print(len(train_ids), len(test_ids))
+    print('train: ',len(train_ids),'test: ',len(test_ids))
 
 
     whole_corpus = datasets.TableFeatures(corpus,

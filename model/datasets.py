@@ -19,7 +19,8 @@ EMBEDDING_FILL= 0.0
 SEED = 100
 
 
-TYPENAME = os.environ['TYPENAME']
+#TYPENAME = os.environ['TYPENAME']
+TYPENAME = 'type78'
 valid_types = get_valid_types(TYPENAME)
 
 header_path = join(os.environ['BASEPATH'], 'extract', 'out', 'headers', TYPENAME)
